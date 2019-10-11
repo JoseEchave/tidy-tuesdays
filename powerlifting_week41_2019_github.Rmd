@@ -1,0 +1,95 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r libraries}
+library(tidyverse)
+```
+
+```{r functions}
+
+`%notin%` <- function(x,y){
+  !(x %in% y)
+}
+```
+
+
+```{r data_loading}
+ipf_lifts <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-08/ipf_lifts.csv")
+```
+
+#Data transformation
+
+```{r data_transformation}
+ipf_lifts_long <- ipf_lifts %>% 
+  pivot_longer(cols = starts_with("best3"),names_to = "lift_type",values_to = "best3_kg") %>% 
+  mutate(lift_type = str_extract(lift_type,"(?<=best3).+(?=_kg)")) 
+
+
+championship_days <- sort(unique(ipf_lifts$date))
+records_df <- map_dfr(championship_days,~ ipf_lifts_long %>% 
+  filter(date <= .x,
+    place %notin% c("G","DQ","DD","NS")) %>% #Filter out the non-eligible for awards or doping 
+  group_by(sex,lift_type) %>%
+ # summarize(max(best3_kg,na.rm = TRUE))
+  filter(best3_kg == max(best3_kg,na.rm = TRUE)) %>%
+    select(sex,lift_type,record_date = date,record_by = name,record_kg = best3_kg) %>% 
+    mutate(at_day = .x,
+      days_record_standing = difftime(.x,record_date, units = c("days"))))
+
+write_csv2(records_df,"output/records_df.csv")
+
+start_record <- records_df %>% 
+    group_by(sex,lift_type) %>% 
+  summarize(min = min(record_kg))
+
+records_df2 <- records_df %>% 
+  left_join(start_record, by = c("sex" = "sex","lift_type" = "lift_type")) %>% 
+    group_by(sex,lift_type) %>% 
+  mutate(min = min(record_kg),
+    times_initial_record = record_kg/min)
+
+records_df2
+  
+```
+
+```{r data_filtering}
+record_count_per_person <- records_df2 %>% 
+  select(record_date,record_by,sex,lift_type,record_kg) %>% 
+  unique() %>% 
+  group_by(record_by,sex) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n))
+
+over_5_record_names <- record_count_per_person %>% 
+  filter(n > 5) %>% 
+  pull(record_by)
+```
+
+
+
+# Graph all
+```{r graph_all}
+records_df2 %>% 
+  ggplot() +
+  geom_line(mapping = aes(at_day,times_initial_record,color = sex,linetype = lift_type))
+```
+
+```{r final_graph}
+records_df2 %>% 
+  filter(sex == "F") %>% 
+  ggplot() +
+  geom_line(mapping = aes(at_day,times_initial_record,linetype = lift_type)) +
+  geom_point(data = records_df2 %>% filter(record_by %in% over_5_record_names),mapping = aes(record_date,times_initial_record,color = record_by)) +
+  labs(title = "Female powerlifting record progression",
+    subtitle = "Powerlifter with over 5 records highlighted",
+    x = "date",
+    y = "current record / initial record",
+    linetype = "Lift type",
+    color = "Powerlifter",
+    caption = "@perspectivalean") +
+  theme_minimal()
+
+```
+
