@@ -1,0 +1,151 @@
+---
+title: "CRAN_week46_2019"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(visNetwork)
+```
+
+
+```{r Data loading}
+cran_code <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-12/loc_cran_packages.csv")
+```
+
+```{r functions}
+nodes_from_df <- function(df,from_col,to_col){
+  from_col <- rlang::enquo(from_col)
+  to_col <- rlang::enquo(to_col)
+  from_list <- df %>%
+    dplyr::distinct(!!from_col) %>%
+    dplyr::rename(label = !!from_col)
+
+  to_list <- df %>%
+    dplyr::distinct(!!to_col) %>%
+    dplyr::rename(label = !!to_col)
+
+  nodes <- dplyr::full_join(from_list, to_list, by = "label") %>%
+    dplyr::distinct() %>%
+    tibble::rowid_to_column("id")
+
+  nodes
+
+}
+
+edge_from_df <- function(df,nodes_df,from_col,to_col){
+  from_col_nse <- deparse(substitute(from_col))
+  to_col_nse <- deparse(substitute(to_col))
+  edges <- df %>%
+    dplyr::left_join(nodes_df, by = setNames("label",from_col_nse)) %>%
+    dplyr::rename(from_id = id) %>%
+    dplyr::left_join(nodes_df, by = setNames("label",to_col_nse)) %>%
+    dplyr::rename(to_id = id) %>%
+    dplyr::select(from = from_id, to = to_id)
+  edges
+}
+
+pkg_with_two_languages <- function(vector){
+  vector <- unlist(vector)
+  languages %>% 
+  rowwise() %>% 
+  mutate(count = ifelse(sum(language_ls %in% vector) >= 2,1,0)) %>% 
+  ungroup() %>% 
+  summarize(total = sum(count)) %>% 
+  pull(total)
+}
+
+```
+
+
+```{r}
+#Get only languages that appear in more than 50 packages
+top_languages <- cran_code %>% 
+  group_by(language) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n)) %>% 
+  filter(n > 50) %>% 
+  pull(language)
+
+#Nest data to get list of languages per package
+nest <- cran_code %>% 
+ group_by(pkg_name) %>% 
+  nest() %>% 
+  mutate()
+
+
+languages <- nest %>% 
+#Order list of languages same way as the vector top_languages
+  mutate(language_ls = map(data,~ discard(.x$language[order(match(.x$language,top_languages))],is.na)),
+    languages = map_chr(language_ls,~paste0(.x,collapse = ";")))
+
+#Visualize top combinations of different languages in the packages
+languages %>% 
+  group_by(languages) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n))
+```
+
+```{r}
+#Create a data_frame with all combinations of two languages
+all_options <- expand.grid(top_languages,
+  top_languages,
+  stringsAsFactors = FALSE)
+
+
+
+unique_options <- all_options %>%
+#Convert two columns into a vector
+   mutate(two_lang = map2(Var1,Var2,~ c(.x,.y)),
+#Create a character separated by ; with the vector
+     two_lang_text = map_chr(two_lang,~paste0(.x,collapse = ";")),
+#Order the vector 
+     two_lang_ord = map(two_lang,~ discard(.x[order(match(.x,top_languages))],is.na)),
+#Create a character column with the ordered vector
+     two_lang_ord_text = map_chr(two_lang_ord, ~paste0(.x,collapse = ";"))) %>% 
+#To avoid repeated pairs, filter so that the ordered text is equal to non-order (reduces options to half)
+  filter(two_lang_text == two_lang_ord_text) %>% 
+#For each of the combinations, calculate the total of packages that contains at least those two languages
+  mutate(count_pkg = map_dbl(two_lang_ord,pkg_with_two_languages)) %>% 
+#Exclude repeated languages
+  filter(count_pkg > 1)
+
+```
+
+```{r}
+#calculate How much connections to other languages each has
+by_language <- unique_options %>% 
+  group_by(Var1) %>% 
+  summarize(font.size = n()*5,
+    value = n())
+
+#Exclude some connections to avoid graph cluttering
+unique_options_filt <- unique_options %>% 
+  filter(count_pkg > 25)
+
+#Create nodes
+nodes <- nodes_from_df(unique_options_filt,Var1,Var2) %>% 
+  left_join(by_language, by = c("label" = "Var1"))
+#Create edges
+edges <- edge_from_df(unique_options_filt,nodes,Var1,Var2)
+edges$value <- (unique_options_filt$count_pkg/min(unique_options_filt$count_pkg))
+
+
+```
+
+```{r}
+#Create graph
+visNetwork(nodes,edges,
+  main = list(text = "Programming language links in CRAN packages",
+    style = "font-family:Sans-serif;color:#FFFFFF;font-size:25px;text-align:center"),
+  submain = list(text = "Which languages appear together with others in the packages?",
+    style = "font-family:Sans-serif;color:#FFFFFF;font-size:12px;text-align:center"),
+  background = "black") %>% 
+  visNodes(size = "font.size",font = list(color = "#FFFFFF")) %>% 
+    visInteraction(dragNodes = FALSE, 
+                 dragView = FALSE) %>%
+  visLayout(randomSeed = 150) %>% 
+   visPhysics(solver = "forceAtlas2Based", 
+            forceAtlas2Based = list(gravitationalConstant = -1000))  
+```
+
