@@ -1,0 +1,82 @@
+---
+title: "Tidytuesday2019-47"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(ggtext)
+```
+
+```{r}
+Sys.setlocale("LC_CTYPE", "en_NZ.UTF-8")
+nz_bird <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-11-19/nz_bird.csv",
+  locale = locale(encoding = "UTF-8"))
+```
+
+```{r}
+birds_points <- nz_bird %>%  mutate(f1_points = case_when(vote_rank == "vote_1" ~ 25,
+    vote_rank == "vote_2" ~ 18,
+    vote_rank == "vote_3" ~ 15,
+    vote_rank == "vote_4" ~ 12,
+    vote_rank == "vote_5" ~ 10,
+    TRUE ~ 0),
+    motogp_points = case_when(vote_rank == "vote_1" ~ 25,
+    vote_rank == "vote_2" ~ 10,
+    vote_rank == "vote_3" ~ 16,
+    vote_rank == "vote_4" ~ 13,
+    vote_rank == "vote_5" ~ 11,
+    TRUE ~ 0)) %>% 
+  group_by(bird_breed) %>% 
+  summarize(F1 = sum(f1_points),
+    MotoGP = sum(motogp_points)) %>% 
+  arrange(desc(F1)) %>% 
+  filter(!is.na(bird_breed)) %>% 
+  head(3) %>% 
+  tidyr::pivot_longer(cols = c("F1","MotoGP"),
+    names_to = "point_system",
+    values_to = "points") %>% 
+  mutate(birds_order = factor(bird_breed,levels = c("K\u101k\u101p\u14d","Yellow-eyed penguin","Black Robin")))
+
+label_df <- data_frame(label = c(`Kākāpō` = "<img src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Strigops_habroptilus_1-1c.jpg/330px-Strigops_habroptilus_1-1c.jpg'
+    width='50' /><br>**2nd** <br>*Kākāpō*",
+  `Yellow-eyed penguin` = "<img src='https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Yellow-eyed_Penguin%2C_Catlins%2C_New_Zealand.JPG/330px-Yellow-eyed_Penguin%2C_Catlins%2C_New_Zealand.JPG'
+    width='50' /><br>**1st** 
+  <span style='font-family: \"Font Awesome 5 Free Solid\";content: \"\\f091\";'></span>
+  <br>*Yellow-eyed penguin*",
+  `Black Robin` = "<img src='https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Black_Robin_on_Rangatira_Island.jpg/375px-Black_Robin_on_Rangatira_Island.jpg'
+    width='50' /><br>**3rd** <br>*Black Robin*"),
+  x = c(1,2,3),
+  y = c(205000,235000,145000) + 38000,
+  color = "white")
+
+ggplot(birds_points) +
+  geom_col(mapping = aes(birds_order,points,fill = point_system),position = "dodge") +
+  geom_richtext(data = label_df,mapping = aes(x,y,label = label), fill = NA, label.color = NA) +
+scale_y_continuous(limits = c(0,300000)) +
+  theme_void() +
+  scale_fill_manual(values = c("#00247D","#CC142B")) +
+   theme(legend.position = "bottom",
+    plot.title = element_text(size = 15, hjust = 0.5,face = "bold"),
+    plot.subtitle = element_text(size = 10, hjust = 0.5, vjust = 1, color = "grey40",margin = margin(0,10,10,0)),
+    strip.text.x = element_text(size = 10, face = "bold"),
+    plot.caption = element_text(size = 7.5, color = "grey40"),
+    legend.title = element_text(color = "grey40", size = 8),
+    legend.text = element_text(color = "grey40", size = 7, hjust = 0.5),
+    legend.text.align = 0,
+    plot.background = element_rect(fill = "#FFFFFF", color = NA),
+panel.background = element_rect(fill = "#FFFFFF", color = NA),
+legend.background = element_rect(fill = "#FFFFFF", color = NA)) +
+  labs(title = "New Zealand Bird of the Year",
+    subtitle = "Podium, using F1 and Moto GP point system",
+    fill = "",
+    caption = "@perspectivalean")
+ ggsave("output/NZ_birds.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)
+
+```
+
+```{r}
+
+```
+
