@@ -15,4 +15,4 @@ site_data$x <- map_dbl(geometry_data,~.x[1])
 #do the same with the second element (Y coordinate
 site_data$y <- map_dbl(geometry_data,~.x[2])
 
-write_csv(site_data,"data/amazon_suppliers_info.csv")
+write_csv(site_data,"amazon_suppliers_info.csv")
