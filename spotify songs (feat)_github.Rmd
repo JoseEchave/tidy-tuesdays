@@ -1,0 +1,126 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Read the file
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggtext)
+library(scales)
+spotify_songs_raw <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+```
+See the quantity of featuring songs
+most of the songs contain feat. as the featuring word
+```{r}
+spotify_songs_raw %>% 
+  filter(str_detect(track_name,"featuring|Featuring"))
+
+```
+
+Performing regex for extract the featuring artist list, and then splitting by ","/"&"/"and" words, to get a vector with the featuring artists for each song.
+```{r}
+spotify_songs <- spotify_songs_raw %>% 
+    mutate(feat_raw = str_extract(track_name,"(?<=(feat\\. )).+?(?=\\)|\\])")) %>% 
+  mutate(feat_ls = str_split(feat_raw,", | & |and "),
+    num_feat = map_dbl(feat_ls,NROW),
+    year = year(ymd(track_album_release_date)))
+
+songs_feat <- spotify_songs %>% 
+  filter(str_detect(track_name,"feat.")) %>% 
+  filter(!is.na(feat_raw))
+```
+
+The song with biggest ammount of featuring artists
+```{r}
+songs_feat %>% 
+  filter(num_feat == max(num_feat)) %>% 
+  select(track_name,feat_raw,num_feat)
+```
+Make a long list with each individual featuring artist
+```{r}
+songs_feat_long <- songs_feat %>% 
+  unnest(feat_ls) %>% 
+  rename(feat_artist = feat_ls)
+
+```
+Which artist is in most featurings
+```{r}
+songs_feat_long %>% 
+  group_by(feat_artist) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n))
+```
+Most songs in the list are from 2019
+```{r}
+ggplot(songs_feat %>% group_by(year) %>% summarize(n = n())) +
+  geom_col(mapping = aes(year,n))
+```
+
+```{r}
+songs_feat_long %>% filter(feat_artist == "Drake")
+```
+Featurings by genre
+
+```{r}
+percent_feat_genre <- spotify_songs %>% 
+  group_by(playlist_genre) %>% 
+  summarize(n = n(),
+    n_feat = sum(!is.na(feat_raw))) %>% 
+  mutate(percent_feat = n_feat/n) %>% 
+  arrange(desc(percent_feat))
+percent_feat_genre
+```
+
+Most featured artist by genre?
+```{r}
+top_feat_by_genre <- songs_feat_long %>% 
+  group_by(playlist_genre,feat_artist) %>%
+  summarize(n = n()) %>% 
+  ungroup() %>% 
+  group_by(playlist_genre) %>% 
+  filter(n == max(n)) %>% 
+   summarize(top_feat_artists = paste(paste(feat_artist,collapse = ", ")," (",unique(n),")"),
+     n_top_feat = unique(n))
+top_feat_by_genre
+```
+
+```{r}
+genre_feat_summary <- percent_feat_genre %>% 
+  left_join(top_feat_by_genre,by = c("playlist_genre")) %>% 
+  mutate(fct_reorder(playlist_genre,percent_feat))
+genre_feat_summary
+```
+
+```{r}
+ggplot(genre_feat_summary) +
+  geom_col(mapping = aes(fct_reorder(playlist_genre,percent_feat),n),fill = "grey90",width = 0.5) +
+  geom_col(mapping = aes(playlist_genre,n_feat,fill = "Contains feat."),width = 0.5) +
+  geom_col(mapping = aes(playlist_genre,n_top_feat,fill = "Top featuring artists")) +
+  geom_text(mapping = aes(playlist_genre,n_top_feat,label = top_feat_artists,vjust = -1.5,hjust = "left"),
+    color = "#00aeb9",size = 3) +
+  geom_text(mapping = aes(playlist_genre,n_feat + 325,label = percent(percent_feat,accuracy = 0.1),hjust = "right"),
+    color = "#E87722",size = 3) +
+  scale_fill_manual(values = c("#E87722","#00aeb9")) +
+  coord_flip() +
+  theme_minimal() +
+   theme(legend.position = "bottom",
+    plot.title = element_markdown(size = 20, hjust = 0.5,color = "#222222", face = "bold"),
+    axis.ticks = element_blank(),
+    legend.text.align = 0,
+     panel.grid.major = element_blank(), 
+     panel.grid.minor = element_blank(),
+    panel.background = element_blank()) +
+  labs(x = "",
+    y = "songs",
+    fill = "",
+    legend = "",
+    title = "Rock bands don't like <span style='color:#E87722'>feat</span>uring artists",
+    subtitle = "",
+    caption = "@perspectivalean")
+
+
+ ggsave("output/feat_picture.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)
+```
+
