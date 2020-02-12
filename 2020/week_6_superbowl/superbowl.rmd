@@ -1,0 +1,110 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(extrafont)
+library(ggtext)
+library(glue)
+```
+ 
+
+```{r}
+
+# Get the Data
+
+attendance <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/attendance.csv')
+standings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-04/standings.csv')
+
+winner_logos <- tribble(~team_name,~logo_url,
+  "Chiefs","http://loodibee.com/wp-content/uploads/nfl-kansas-city-chiefs-team-logo-2-300x300.png",
+  "Eagles","http://loodibee.com/wp-content/uploads/nfl-philadelphia-eagles-team-logo-2-300x300.png",
+  "Broncos","http://loodibee.com/wp-content/uploads/nfl-denver-broncos-team-logo-2-300x300.png",
+  "Seahawks","http://loodibee.com/wp-content/uploads/nfl-seattle-seahawks-team-logo-2-300x300.png",
+  "Packers","http://loodibee.com/wp-content/uploads/nfl-green-bay-packers-team-logo-2-300x300.png",
+  "Saints","http://loodibee.com/wp-content/uploads/nfl-new-orleans-saints-team-logo-2-300x300.png",
+  "Patriots","http://loodibee.com/wp-content/uploads/nfl-new-england-patriots-team-logo-2-300x300.png",
+  "Giants","http://loodibee.com/wp-content/uploads/nfl-new-york-giants-team-logo-2-300x300.png",
+  "Steelers","http://loodibee.com/wp-content/uploads/nfl-pittsburgh-steelers-team-logo-2-300x300.png",
+  "Ravens","http://loodibee.com/wp-content/uploads/nfl-baltimore-ravens-team-logo-2-300x300.png",
+  "Colts","http://loodibee.com/wp-content/uploads/nfl-indianapolis-colts-team-logo-2-300x300.png",
+  "Buccaneers","http://loodibee.com/wp-content/uploads/nfl-tampa-bay-buccaneers-team-logo-2-300x300.png")
+
+```
+
+
+```{r}
+most_stable_attendance_by_year <- attendance %>% 
+  group_by(team_name,year) %>% 
+  summarize(std_dev = sd(weekly_attendance,na.rm = TRUE),
+    variance = var(weekly_attendance,na.rm = TRUE),
+    dif_max_min = max(weekly_attendance,na.rm = TRUE) - min(weekly_attendance,na.rm = TRUE)) %>% 
+  arrange(variance) %>% 
+  ungroup() %>% 
+  group_by(team_name) %>% 
+  top_n(1,std_dev) %>% 
+  left_join(standings,by = c("team_name","year"))
+
+```
+
+```{r}
+median_att_two_years <- attendance %>% 
+  group_by(team,year) %>% 
+  summarize(median_attendance = mean(weekly_attendance,na.rm = TRUE)) %>% 
+  mutate(next_year_median_attendance = lead(median_attendance,1))
+```
+
+
+
+
+
+```{r}
+arrows <- tribble(~x1,~x2,~y1,~y2,~curvature,
+  2007,2010.2,0,4200,-0.3,
+  2011,2010.2,0,4200,0.3)
+standings %>% filter(sb_winner == "Won Superbowl") %>% 
+  left_join(median_att_two_years,by = c("team","year")) %>% 
+  left_join(winner_logos,by = c("team_name")) %>% 
+  mutate(team_year = glue("{year} [{team_name}]"),
+    dif_median = next_year_median_attendance - median_attendance,
+    img_html = glue("<img src='{logo_url}'width='25'/>")) %>% 
+  ggplot(aes(x = year,y = dif_median)) +
+  geom_col(fill = "#6d6d6d") +
+  theme_minimal() +
+  geom_richtext( aes(vjust = ifelse(dif_median > 0,0,1),label = img_html),fill = NA, label.color = NA, # remove background and outline
+    label.padding = grid::unit(rep(0, 4), "pt")) +
+  scale_y_continuous(limits = c(-2500,8000),breaks = c(-2500,0,7500)) +
+  annotate("text",x = 2010,y = 5000,label = "Giants lost attendance \n next year after winning, twice!",
+    size = 2.5) +
+  geom_curve(data = arrows, mapping = aes(x = x1,y = y1,xend = x2,yend = y2),
+    arrow = arrow(length = unit(0.07, "inch"),ends = "first"), 
+    size = 0.4,curvature = 0.3) +
+   theme_minimal() +
+   theme(legend.position = "bottom",
+    plot.title = element_markdown(size = 20, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, vjust = 1,margin = margin(0,10,10,0)),
+    strip.text = element_text(size = 10),
+    plot.caption = element_text(size = 7.5),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 10),
+    legend.text =  element_text(size = 7.5),
+    axis.text = element_text(size = 7.5),
+    axis.ticks = element_blank(),
+    legend.text.align = 0,
+     panel.grid.major.x = element_blank(), 
+     panel.grid.minor = element_blank(),
+    panel.background = element_blank()) +
+  labs(x = "",
+    y = "",
+    fill = "",
+    legend = "",
+    title = "Post Super Bowl hungover",
+    subtitle = "Does NFL weekly median attendance increase after winning the Super Bowl?",
+    caption = "@perspectivalean")
+
+ggsave("output/superbowl.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)
+
+```
+
