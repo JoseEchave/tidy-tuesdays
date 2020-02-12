@@ -1,0 +1,69 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(extrafont)
+library(ggtext)
+
+hotels_raw  <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-11/hotels.csv')
+
+```
+
+
+```{r}
+hotels <- hotels_raw %>% mutate(arrival_date = dmy(glue("{arrival_date_day_of_month}/{arrival_date_month}/{arrival_date_year}")),
+  reservation_date = arrival_date - lead_time,
+  reservation_date_day = day(reservation_date))
+```
+
+
+```{r}
+hotels %>% 
+  filter(agent == "1") %>% 
+  #head(1000) %>% 
+ggplot() +
+  geom_curve(mapping = aes(x = reservation_date,xend = arrival_date,color = reservation_status,y = 0,yend = 1),
+    curvature = -0.4,alpha = 0.05,size = 0.1) +
+  ylim(0,1000) +
+  geom_vline(aes(xintercept = ymd("2014-10-17")),linetype = "dashed") +
+   annotate("text",x = ymd("2014-10-17"),y = 700,label = "2065 reservations made on \n 2014/10/17 (97.5% cancelled)",angle = 90,
+     size = 2.5,vjust = 0.5) +
+  geom_vline(aes(xintercept = ymd("2015-07-10")),linetype = "dashed") +
+     annotate("text",x = ymd("2015-07-10"),y = 700,label = "792 reservations made on \n 2015/07/10 (99.7% cancelled)",angle = 90,
+     size = 2.5,vjust = 0.5) +
+  scale_color_manual(values = c("#d91d1b","#2585ca"),
+    labels = c("<p style='color:#d91d1b'>Canceled</p>","<p style='color:#2585ca'>Not canceled</p>")) +
+     theme_minimal() +
+    theme(legend.position = "bottom",
+    legend.text =  element_markdown(size = 7.5),
+    plot.title = element_markdown(size = 20, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, vjust = 1),
+    strip.text = element_text(size = 10),
+    plot.caption = element_text(size = 7.5),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 10),
+    axis.text = element_text(size = 7.5),
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text.align = 0,
+     panel.grid.major = element_blank(),
+     panel.grid.minor = element_blank(),
+    panel.background = element_blank()) +
+    labs(x = "",
+    y = "",
+    color = "",
+    legend = "",
+    title = "Dishonest travel agent?",
+    subtitle = "Data for a single agent, each line represents reservation and arrival date",
+    caption = "@perspectivalean")
+
+ggsave("output/hotel_bookings.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 300)
+```
+
