@@ -1,0 +1,63 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(waffle)
+```
+ 
+
+```{r}
+big_epa_cars <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-15/big_epa_cars.csv")
+```
+
+```{r}
+unique(big_epa_cars$fuelType)
+unique(big_epa_cars$atvtype)
+big_epa_cars %>% 
+  mutate(cartype = case_when(
+    fuelType == "Electricity" ~ "Electric car",
+    str_detect(fuelType," Electricity") ~ "Hybrid car",
+   fuelType == "CNG" | str_detect(fuelType, "gas") ~ "Natural gas car",
+    TRUE ~ "Diesel/Gasoline"
+  ))
+```
+
+
+
+```{r}
+df_clean <- big_epa_cars %>% 
+  select(fuelType,fuelType1,fuelType2,make,model,year) %>% 
+    mutate(cartype = case_when(fuelType == "Electricity" ~ "Electric car",
+    str_detect(fuelType," Electricity") ~ "Hybrid car",
+   fuelType == "CNG" | str_detect(fuelType, "gas") ~ "Natural gas car",
+    TRUE ~ "Diesel/Gasoline"),
+      decade = year - year %% 10 ) %>% 
+  group_by(decade,cartype) %>% 
+  summarize(n = n()) %>% 
+  group_by(decade) %>% 
+  mutate(total_year = sum(n),
+    percentage = 100 * (n/total_year),
+  percentage_round = round(percentage))
+```
+
+```{r}
+
+df_clean %>% 
+  ggplot(aes(fill = cartype, values = percentage_round)) +
+  geom_waffle(size = 0.5,color = "white") +
+  coord_equal() +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  theme_enhance_waffle() +
+    facet_wrap(~decade, nrow = 1) +
+  labs(title = "The monopoly of conventional fuels",
+    subtitle = "Fuel type by decade in a 100 space car parking",
+    fill = " Fuel type group",
+    caption = "@perspectivalean")
+
+ggsave("figs/fuel_type_by_decade.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)
+```
+
