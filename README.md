@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 8 - Food consumption and CO2
+![food_consumption](2020/week_8_food_consumption/food_consumption.png)
 ## Week 7 - Hotel bookings
 ![hotels](2020/week_7_hotels/hotel_bookings.png)
 ## Week 6 - Superbowl
