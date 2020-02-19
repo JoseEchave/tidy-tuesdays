@@ -1,0 +1,82 @@
+---
+title: "Food consumption tidytuesday"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ggtern)
+```
+
+```{r}
+food_consumption <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-18/food_consumption.csv')
+
+
+```
+
+```{r}
+consum_group_percent <- food_consumption %>% 
+  mutate(group = case_when(food_category == "Pork" ~ "Meat",
+    food_category == "Poultry"~ "Meat",
+    food_category == "Beef" ~ "Meat",
+    food_category == "Lamb & Goat" ~ "Meat",
+    food_category == "Fish" ~ "Fish",
+    food_category == "Wheat and Wheat Products" ~ "Grains",
+    food_category == "Rice" ~ "Grains",
+    food_category == "Soybeans" ~ "Grains",
+    TRUE ~ "Other")) %>% 
+  filter(group != "Other") %>% 
+  group_by(country) %>% 
+  mutate(total_consumption = sum(consumption)) %>% 
+  ungroup() %>% 
+  group_by(country,group) %>% 
+  summarize(percentage_consumption = sum(consumption/total_consumption)*100)
+consum_group_percent
+```
+
+```{r}
+data_terniary <- consum_group_percent %>% 
+  pivot_wider(names_from = group,values_from = percentage_consumption) %>%
+  mutate(color_fill = case_when(country == "India" ~ "Top Grain",
+    country == "Maldives" ~ "Top Fish",
+    country == "Paraguay" ~ "Top Meat",
+    TRUE ~ "Others"))
+
+ggtern(data = data_terniary ,aes(Fish,Grains,Meat,fill = color_fill)) +
+  geom_point(aes(alpha = ifelse(color_fill == "Others",0.8,1)),shape = 21, color = 'white', size = 2) +
+   scale_fill_manual(values = c("#6d6d6d","#01888b","#d8a458","#f9906f")) +
+  theme_minimal() +
+  annotate("text",x = -120,y = 5,z = 5,label = "Fish",
+    color = "#01888b") +
+  annotate("text",x = 5,y = -120,z = 5,label = "Grains",
+    color = "#d8a458") +
+  annotate("text",x = 5,y = 5,z = -120,label = "Meat",
+    color = "#f9906f") +
+  annotate("text",x = 2,y = 8,z = 0.5,label = "India \n 94% grains\n 2,6% meat\n 3,4% Fish",
+    color = "#d8a458",size = 2.5,hjust = 0) +
+  annotate("text",x = 5,y = 1.5,z = 0.25,label = "Maldives \n 38% grains\n 9% meat\n 53% Fish",
+    color = "#01888b",size = 2.5,hjust = 0) +
+  annotate("text",x = 2,y = 2,z = 5,label = "Paraguay \n 39% grains\n 57% meat\n 4% Fish",
+    color = "#f9906f",size = 2.5,hjust = 0) +
+  labs(x = "",
+    y = "",
+    z = "",
+    title = "Variety in diets",
+    subtitle = "Percentage of consumption of food types by country",
+    caption = "Data: Food carbon footprint index 2018 \n@perspectivalean") +
+   theme(legend.position = "none",
+    plot.title = element_text(size = 20, hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, vjust = 1,margin = margin(0,10,10,0)),
+    strip.text = element_text(size = 10, face = "bold"),
+    plot.caption = element_text(size = 5),
+    axis.title = element_text(size = 12),
+    legend.title = element_text(size = 10),
+    legend.text =  element_text(size = 7.5),
+    axis.text = element_text(size = 7.5),
+    axis.ticks = element_blank(),
+    legend.text.align = 0,
+     panel.grid.major.x = element_blank(), 
+     panel.grid.minor = element_blank(),
+    panel.background = element_blank())
+```
+
