@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 9 - Measles and vaccinations in USA
+![measles](2020/week_9_measles/measles_usa.png)
 ## Week 8 - Food consumption and CO2
 ![food_consumption](2020/week_8_food_consumption/food_consumption.png)
 ## Week 7 - Hotel bookings
