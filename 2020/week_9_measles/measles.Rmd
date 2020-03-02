@@ -1,0 +1,80 @@
+---
+title: "Measles TidyTuesday"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ggtext)
+```
+
+
+```{r}
+measles <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-02-25/measles.csv')
+
+measles %>% 
+  filter(!is.na(xrel))
+
+```
+
+```{r}
+vac_differences <- measles %>%
+  filter(overall != -1, mmr != -1) %>% 
+  mutate(dif_vac = overall - mmr)  
+
+  ggplot(vac_differences,aes(dif_vac)) +
+  geom_histogram() +
+    theme_minimal()
+```
+
+
+
+```{r}
+usa_map <- rnaturalearth::ne_states(country = "United States of America",returnclass = "sf")
+```
+
+
+```{r}
+vac_differences_filt <- vac_differences %>% 
+  group_by(name,city) %>% 
+  filter(lng == min(lng))
+
+```
+
+```{r}
+arrows <- tribble(~x1,~x2,~y1,~y2,~curvature,
+  -100,-105,42,40,-0.3,
+  -118,-123,43.5,47.1,0.3) 
+
+ggplot() +
+  geom_sf(data = usa_map,
+    color = alpha("white",0.5),
+    size = 0.25,
+    fill = ifelse(usa_map$name %in% c("Colorado","Washington"),alpha("grey20",0.6),"#cccccc")) +
+  xlim(-125,-66.96466) +
+  ylim(24.5,48.5) +
+  theme_void() +
+  geom_point(data = vac_differences_filt %>% filter(dif_vac < -20), 
+    mapping = aes(lng,lat),color = "#d91d1b",alpha = 0.1) +
+  geom_point(data = vac_differences_filt %>% filter(dif_vac > 0), 
+    mapping = aes(lng,lat),color = "#2585ca",alpha = 0.5) +
+  geom_curve(data = arrows, mapping = aes(x = x1,y = y1,xend = x2,yend = y2),
+    arrow = arrow(length = unit(0.07, "inch"),ends = "first"), 
+    size = 0.4, color = alpha("grey20",0.6),curvature = -0.3) +
+    geom_text(mapping = aes(x = -99.8,y = 42.5,
+      label = "Measles vaccinations higher\n than overall vaccinations \n by at least 20%. \n 50% of total in Colorado",hjust = "left",vjust = "top"),size = 2) +
+      geom_text(mapping = aes(x = -117.8,y = 44.5,
+      label = "Measles vaccinations are \n lower than overall vaccinations. \n 77% of total in Washington",hjust = "left",vjust = "top"),size = 2) +
+  theme(plot.title = element_markdown(size = 20, hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, vjust = 1,margin = margin(0,10,10,0)),
+    strip.text = element_text(size = 10),
+    plot.caption = element_text(size = 5)) +
+  labs(title = "<span style='color:#d91d1b'>Hysteria</span> VS <span style='color:#2585ca'>Overconfidence</span>",
+    subtitle = "Each point represents a school",
+    caption = "Data: Wall Street Journal\n @perspectivalean")
+ 
+ ggsave("output/measles_usa.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)
+
+```
+
+
