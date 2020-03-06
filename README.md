@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 10 - NHL goals
+![NHL goals](2020/week_10_nhl_goals/hockey_goals.png)
 ## Week 9 - Measles and vaccinations in USA
 ![measles](2020/week_9_measles/measles_usa.png)
 ## Week 8 - Food consumption and CO2
