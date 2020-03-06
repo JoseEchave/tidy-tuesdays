@@ -1,0 +1,87 @@
+---
+title: "NHL goals tidytuesday"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(santoku)
+library(extrafont)
+```
+
+
+```{r}
+game_goals <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-03/game_goals.csv')
+
+```
+
+
+
+
+
+```{r}
+goals_per_game <- game_goals %>% 
+  group_by(season,game_num) %>% 
+  summarize(goals_sum = sum(goals)) %>% 
+  ungroup() %>% 
+  mutate(goals_range = santoku::chop(goals_sum,breaks = c(0,0,5,10,15,20,20),extend = FALSE,drop = TRUE,
+    labels = c("0","0-4","5-9","10-14","15-19","20")))
+
+
+goals_per_game %>% filter(goals_sum == max(goals_sum))
+
+game_goals %>% filter(season == "2015",game_num == 48)
+
+arrows <- tribble(~x1,~x2,~y1,~y2,~curvature,
+  48.5,60,2015,2002,-0.3,
+  7.5,10,1980.5,1982,0.3)
+
+ggplot(goals_per_game) +
+  geom_tile(mapping = aes(x = game_num,y = season,fill = fct_relevel(goals_range, c("0","0-4","5-9","10-14","15-19","20")))) +
+  guides(fill = guide_legend(nrow = 1),alpha = 0.9) +
+  scale_fill_viridis_d(direction = -1)+
+  scale_y_continuous(trans = "reverse") +
+   geom_curve(data = arrows, mapping = aes(x = x1,y = y1,xend = x2,yend = y2),
+    arrow = arrow(length = unit(0.07, "inch"),ends = "first"), 
+    size = 0.4, color = "#00222e",curvature = 0.3) +
+  annotate("text",x = 60,y = 2002,label = "Record: 20 goals \n in 21 games (2015)",
+    size = 2.5,color = "#00222e",hjust = 0,vjust = 0.5) +
+    annotate("text",x = 10,y = 1982,label = "0 goals in 7 games\nbetween 1979/10/23 and	 1979/11/02",
+    size = 2.5,color = "#00222e",hjust = 0,vjust = 0.5) +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+    axis.ticks = element_blank(),
+    legend.text.align = 0,
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank()) +
+  labs(title = "Golden decades for hockey goals",
+    subtitle = "Sum of goals in NHL season games has been increasing over the years",
+    x = "Game number",
+    y = "Season",
+    fill = "Total goals",
+    caption = "Data: Washington Post \n@perspectivalean")
+
+ggsave("output/hockey_goals_github.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)
+
+```
+
+```{r}
+#Number of games played in the game number with most goals
+pairs_comparison <- game_goals %>% filter(season == "2015",game_num == 48) %>% 
+  select(team,opp) %>% unique() %>% 
+  mutate(ordered = map2(team,opp,list)) %>% 
+  select(team,opp) %>% 
+  unique()
+pairs_comparison[!duplicated(t(apply(pairs_comparison, 1, sort))),]
+
+#No goals between
+goals_per_game %>% filter(season == "1980") 
+game_goals %>% filter(season == 1980,game_num %in% c(6:9)) %>% 
+  summarize(min_date = min(date),max_date = max(date))
+
+game_goals %>% filter(season == 1980,game_num %in% c(6:9)) %>% 
+  select(team,opp) %>% 
+  unique()
+```
+
