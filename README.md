@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 12 - The Office
+![The office laughs](2020/week_12_the_office/the office.png)
 ## Week 10 - NHL goals
 ![NHL goals](2020/week_10_nhl_goals/hockey_goals.png)
 ## Week 9 - Measles and vaccinations in USA
