@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 14 - Breweries in USA
+![Breweries](2020/week_14_breweries/breweries.png)
 ## Week 12 - The Office
 ![The office laughs](2020/week_12_the_office/the_office.png)
 ## Week 10 - NHL goals

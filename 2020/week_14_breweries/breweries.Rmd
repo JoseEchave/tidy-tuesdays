@@ -1,0 +1,87 @@
+---
+title: "Tidytuesday week 14: Breweries"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(scales)
+library(extrafont)
+library(ggtext)
+```
+
+```{r}
+# Get the Data
+
+
+brewer_size <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-03-31/brewer_size.csv')
+
+
+```
+
+
+
+# Check the rise of small breweries, but how they still are insignificant when it comes to volume produced.
+```{r}
+brewer_size_grouped <- brewer_size %>% 
+  filter(brewer_size != "Total") %>% 
+  mutate(brewer_size_grouped = if_else(brewer_size %in% c("1 to 1,000 Barrels","1,001 to 7,500 Barrels", "7,501 to 15,000 Barrels",
+    "15,001 to 30,000 Barrels"),brewer_size,"> 30,001 Barrels")) %>% 
+  group_by(brewer_size_grouped,year) %>% 
+  summarize(n_of_brewers = sum(n_of_brewers,na.rm = TRUE),
+    total_barrels = sum(total_barrels,na.rm = TRUE)) %>% 
+  group_by(year) %>% 
+  mutate(sum_breweries = sum(n_of_brewers,na.rm = TRUE),
+    sum_total_barrels = sum(total_barrels,na.rm = TRUE),
+    pct_brewer_size = n_of_brewers/sum_breweries,
+    pct_total_barrels = total_barrels/sum_total_barrels) %>% 
+  ungroup() 
+
+```
+
+
+
+```{r}
+
+color_1 <- "green"
+color_2 <- "orange"
+ggplot(brewer_size_grouped %>% filter(year == 2019),
+  aes(x = factor(brewer_size_grouped,levels = c("1 to 1,000 Barrels","1,001 to 7,500 Barrels", "7,501 to 15,000 Barrels",
+    "15,001 to 30,000 Barrels","> 30,001 Barrels")))) +
+  geom_col(aes(y = pct_brewer_size),fill = color_1) +
+  geom_richtext(
+    aes(y = pct_brewer_size,label = paste("<p> <span style = 'color:",color_1,";'> ",percent(pct_brewer_size),"</span> of breweries  produce <br> ",brewer_size_grouped,"</p>")),vjust = -0.25,
+    fill = NA, label.color = NA,
+    label.padding = grid::unit(rep(0, 4), "pt"),
+    size = 2.25
+  ) +
+    geom_col(aes(y = -pct_total_barrels),fill = color_2) +
+    geom_richtext(
+    aes(y = -pct_total_barrels,label = paste("<p> make up for <span style = 'color:",color_2,";'>",percent(pct_total_barrels),"</span>  <br> of total Barrels </p>")),vjust = 1,
+    fill = NA, label.color = NA,
+    label.padding = grid::unit(rep(0, 4), "pt"),
+    size = 2.25
+  ) +
+  scale_y_continuous(breaks = 0,limits = c(-1,1)) +
+   theme_minimal() +
+  theme(legend.position = "bottom",
+    plot.title = element_text(size = 20, hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, vjust = 1,margin = margin(0,10,10,0)),
+    strip.text = element_text(size = 10, face = "bold"),
+    plot.caption = element_text(size = 7.5),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text.align = 0,
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank()) +
+  labs(title = "Small breweries, fighting against giants",
+    subtitle = "Few big breweries produce most of the beer in the US. Data for 2019",
+    x = "",
+    y = "",
+    caption = "#Tidytuesday \n@perspectivalean")
+
+ggsave("output/breweries.png",plot = last_plot(),width = 31.75/1.5,height = 17.85/1.5,units = c("cm"),dpi = 900)  
+```
+
