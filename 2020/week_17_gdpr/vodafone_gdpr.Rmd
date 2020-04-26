@@ -1,0 +1,113 @@
+---
+title: "Tidytuesday GDPR "
+output: html_notebook
+---
+
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(ggtext)
+```
+
+```{r}
+gdpr_violations <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-21/gdpr_violations.tsv')
+gdpr_text <- readr::read_tsv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-21/gdpr_text.tsv')
+
+```
+
+
+# Data transformation
+
+```{r}
+#Separate into separate rows with each article violated
+gdpr_viol_long <- gdpr_violations %>% 
+  separate_rows(article_violated,sep = "\\|") %>% 
+#Extract article and subarticle violated
+  mutate(article_num = str_extract(article_violated,"\\d+(?=\\s)"),
+    subarticle_num = str_extract(article_violated,"(?<=\\().+?(?=\\))"),
+    article_id = paste0(article_num,"-",subarticle_num))
+#What are the most recurring article fines?
+gdpr_viol_long %>% 
+  group_by(article_num) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n))
+```
+
+```{r}
+#Who are the companies leading in those top fines?
+gdpr_viol_long %>% 
+  filter(article_num %in% c("5","6","32")) %>% 
+  group_by(article_num,controller) %>% 
+  summarize(n = n()) %>% 
+  filter(n > 1) %>% 
+  arrange(desc(n))
+```
+
+
+```{r}
+#Get those fines for Vodafone
+incremental_fines_vodafone <- gdpr_viol_long %>% 
+  #Filter for company Vodafone
+  filter(str_detect(controller,"Vodafone"),
+    #Select only the fines repeated most
+    article_num != "58") %>% 
+  #Fix NA date (01/01/1970)
+  mutate(date = case_when( source == "https://www.aepd.es/resoluciones/PS-00411-2018_ORI.pdf" ~ "02/13/2019",
+    source == "https://www.aepd.es/resoluciones/PS-00331-2018_ORI.pdf" ~ "04/08/2018",
+    TRUE ~date),
+    date = mdy(date)) %>% 
+  arrange(date) %>% 
+  group_by(article_num) %>%
+  #Increase count
+  mutate(n = 1:n()) %>% 
+  #Add article name from gdpr_text
+  mutate(label = case_when(article_num == 5 ~ "Art. 5 - Principles relating to \n processing of personal data",
+    article_num == 6 ~ "Art. 6 - Lawfulness of processing",
+    article_num == 32 ~ "Art. 32 - Security of processing",
+    TRUE ~ ""))
+
+#What is the day with most fines?
+incremental_fines_vodafone %>% 
+  group_by(date) %>% 
+  summarize(n = n()) %>% 
+  arrange(desc(n))
+
+#How much is total fine cost for that day?
+gdpr_violations %>% 
+  filter(date == "02/03/2020",str_detect(controller,"Vodafone")) %>% 
+  summarize(unique(date),sum(price))
+```
+
+# Visualization 
+```{r}
+ggplot(incremental_fines_vodafone) +
+  #Line
+  geom_line(aes(date,n,color = article_num)) +
+  #Text explaining what each lines corresponds to
+  geom_text(data = . %>% filter(n == max(n)),
+    aes(date + 10,n,label = label,color = article_num),hjust = 0,size = 2.5) +
+  scale_color_manual(values = c("#2585ca","#ff6600","#20bc40")) +
+  #Color
+  geom_vline(aes(xintercept = ymd("2020-02-03")),alpha = 0.25,linetype = "dashed") +
+  #Text anotation
+   geom_curve( x = ymd("2019-10-10"),y = 13,xend = ymd("2020-02-03"),yend = 14,
+    arrow = arrow(length = unit(0.07, "inch"),ends = "first"), 
+    size = 0.4,curvature = -0.3) +
+  geom_text(aes(x = ymd("2019-10-03"),y = 13),label = "Total of 260 000 € in fines for \nviolating 7 GDPR articles \non 2nd of March 2020",size = 2.5,hjust = 1,vjust = 0.5) +
+
+  scale_x_date(limits = c(ymd("2018-01-01"),ymd("2020-09-15"))) +
+  labs(x = "Date",
+    y = "Number of violations",
+    title = "Privacy: Cheaper to pay than to fix?",
+    subtitle = "Fines for <span style = 'color:#e60000'>Vodafone </span> by GDPR article number",
+    caption = "#Tidytuesday \n @perspectivalean") +
+  theme_minimal() +
+  theme(legend.position = "none", 
+    plot.subtitle = element_markdown())
+
+ggsave("output/gdpr_vodafone.png",plot = last_plot(),width = 31.75/1.4,height = 17.85/1.4,units = c("cm"),dpi = 900)
+
+```
+
