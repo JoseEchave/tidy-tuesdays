@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 17 - GDPR fines in Europe
+![gdpr_vodafone](2020/week_17_gdpr/gdpr_vodafone.png)
 ## Week 14 - Breweries in USA
 ![Breweries](2020/week_14_breweries/breweries.png)
 ## Week 12 - The Office
