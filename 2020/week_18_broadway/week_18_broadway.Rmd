@@ -1,0 +1,133 @@
+---
+title: "Broadway tidyverse"
+output: html_notebook
+---
+
+```{r}
+
+library(tidyverse)
+library(jechaveR)
+library(lubridate)
+`%notin%` <- function(x,y){
+  !(x %in% y)
+}
+
+```
+
+```{r}
+# Get the Data
+
+grosses <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-04-28/grosses.csv', guess_max = 40000)
+
+
+```
+
+
+
+What are the shows that had the biggest change in pct_capacity?
+
+```{r}
+biggest_capacity_dif <- grosses %>%
+  filter(week_ending %notin% c(ymd("2007-11-18"),ymd("2007-11-25"))) %>% 
+  group_by(show) %>%
+  summarize(max_capacity = max(pct_capacity,na.rm = TRUE),
+    min_capacity = min(pct_capacity,na.rm = TRUE)) %>% 
+  mutate(dif_capacity = max_capacity - min_capacity) %>% 
+  arrange((dif_capacity)) %>% 
+  filter(dif_capacity > 0.8)
+
+smallest_capacity_dif <- grosses %>%
+  filter(week_ending %notin% c(ymd("2007-11-18"),ymd("2007-11-25"))) %>% 
+  group_by(show) %>%
+  summarize(max_capacity = max(pct_capacity,na.rm = TRUE),
+    min_capacity = min(pct_capacity,na.rm = TRUE)) %>% 
+  mutate(dif_capacity = max_capacity - min_capacity) %>% 
+  arrange((dif_capacity)) %>% 
+  filter(dif_capacity < 0.2)
+ 
+grosses %>% 
+  filter(show %in% biggest_capacity_dif$show) %>% 
+  group_by(week_ending)
+```
+
+Weeks 2007-11-25 and 2007-11-18 there was a strike? Cancellations?
+https://en.wikipedia.org/wiki/2007_Broadway_stagehand_strike
+Need to take those weeks away
+
+```{r}
+longest_running <- grosses %>% 
+  mutate(year_show = year(week_ending)) %>% 
+  group_by(show) %>% 
+  summarize(n_years = n_distinct(year_show)) %>% 
+  arrange(desc(n_years)) %>% 
+  filter(n_years >= 15)
+
+smallest_capacity_dif %>% 
+  inner_join(longest_running) %>% 
+  arrange(dif_capacity)
+
+biggest_capacity_dif %>% 
+  inner_join(longest_running)
+
+grosses %>% filter(pct_capacity > 1.4)
+```
+
+
+```{r}
+grosses_longest_running <- grosses %>% 
+    filter(show %in% longest_running$show) %>% 
+    mutate(year_show = year(week_ending),
+      decade = year_show - year_show %% 10,
+      date_adjusted = week_ending - years(decade) + years(1980),
+      highlight = ifelse(show %in% c("Wicked","The Phantom of the Opera"),TRUE,FALSE)) %>% 
+    filter(year_show < 2020,year_show >= 1990) %>% 
+  mutate(label_strike = ifelse(decade == 2000,"2007 Broadway stagehand \n 2 week strike",""),
+    label_phantom = ifelse(decade == 1990,"The Phantom of the Opera",""),
+    label_wicked = ifelse(decade == 2000,"Wicked",""),
+    label_capacity = ifelse(decade == 1990,"Capacity starts to fall after record \nof 149 % capacity on 1996-10-20 ",""))
+
+
+
+ggplot(grosses_longest_running,aes(x = date_adjusted,y = pct_capacity,group = show)) +
+
+  geom_line(data = . %>% filter(highlight == FALSE),color = "grey",alpha = 0.5) +
+    geom_rect(data = . %>% filter(decade == 2000) %>% head(1),
+      aes(xmin = ymd("1987-11-18"), ymin = 0, xmax = ymd("1987-11-25"),ymax = 1.5),
+      alpha = 0.25,fill = "red") +
+  
+  geom_line(data = . %>% filter(highlight == TRUE),
+    aes(color = show)) +
+    
+  geom_text(x = ymd("1987-12-01"),y = 1.3,
+    aes(label = label_strike),
+    size = 2,color = "red",hjust = 0,vjust = 0.5) +
+  geom_text(x = ymd("1980-01-01"),y = 1.15,
+    aes(label = label_phantom),
+    size = 2,color = "blue",hjust = 0,vjust = 0.5) +
+  geom_text(x = ymd("1986-11-01"),y = 1.3,
+    aes(label = label_capacity),
+    size = 2,color = "#6d6d6d",hjust = 0,vjust = 0.5) +
+  geom_text(x = ymd("1984-01-01"),y = 1.15,
+    aes(label = label_wicked),
+    size = 2,color = "green",hjust = 0,vjust = 0.5) +
+    
+  ggplot2::scale_color_manual(values = c("blue","green")) +
+  scale_x_date(date_labels = "%b",
+    date_breaks = "1 year") +
+  scale_y_continuous(breaks = c(0,1),limits = c(0,1.5),labels = c("0%","100%")) +
+  facet_wrap(~ factor(decade),ncol = 1) +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(title = "Broadway: Not always sold out",
+    subtitle = "The Phantom of the opera has differences in capacity of up to 114%\nwhile for wicked difference is under 20% (2007 strike excluded).\nGrey lines represent other shows running over 15 years",
+    y = "Theatre capacity",
+    x = "Date",
+    caption = "#TidyTuesday\n@perspectivalean")
+
+
+ggsave("output/broadway_github.jpg",dpi = 600,width = 31.75/1.5,height = 17.85/1.5,units = c("cm"))
+
+```
+
+
+
