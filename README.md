@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 18 - Broadway
+![broadway](2020/week_18_broadway/broadway.jpg)
 ## Week 17 - GDPR fines in Europe
 ![gdpr_vodafone](2020/week_17_gdpr/gdpr_vodafone.png)
 ## Week 14 - Breweries in USA
