@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 25 - Slave voyages
+![slaves](2020/week_25_slavery/slaves.jpg)
 ## Week 21 - Beach Voleyball
 ![volley](2020/week_21_voleyball/voleyball.jpg)
 ## Week 18 - Broadway
