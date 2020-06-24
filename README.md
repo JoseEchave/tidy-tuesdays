@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 26 - Caribou movements
+![](2020/week_26_caribou/caribou_movements.png)
 ## Week 25 - Slave voyages
 ![slaves](2020/week_25_slavery/slaves.jpg)
 ## Week 21 - Beach Voleyball
