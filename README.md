@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 29 - Astronauts
+![](2020/week_29_astronauts/astronauts.png)
 ## Week 26 - Caribou movements
 ![](2020/week_26_caribou/caribou_movements.png)
 ## Week 25 - Slave voyages
