@@ -25,8 +25,8 @@ rehomed_animals <- animal_outcomes %>%
   group_by(animal_type_fct) %>% 
   arrange(animal_type_fct,year) %>% 
   mutate(cumulative_rehomed = cumsum(total_fct),
-    icon = case_when(animal_type_fct == "Cats"~ "icons/cat.png",
-      animal_type_fct == "Dogs" ~ "icons/dog.png",
+    icon = case_when(animal_type_fct == "Cats"~ "cat.png",
+      animal_type_fct == "Dogs" ~ "dog.png",
       TRUE ~ ""),
     icon_html = glue::glue("<img src='{icon}'width='15'/>"))
 
