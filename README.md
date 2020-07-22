@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 30 - Rehomed dogs and cats
+![](2020/week_30_animals/animals_aus.png)
 ## Week 29 - Astronauts
 ![](2020/week_29_astronauts/astronauts.png)
 ## Week 26 - Caribou movements
