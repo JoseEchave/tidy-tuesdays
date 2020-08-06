@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 32 - Solar energy in Europe
+![](2020/week_32_energy/europe_energy.png)
 ## Week 30 - Rehomed dogs and cats
 ![](2020/week_30_animals/animals_aus.png)
 ## Week 29 - Astronauts
