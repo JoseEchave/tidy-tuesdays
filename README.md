@@ -1,5 +1,7 @@
 Submissions of tidy tuesdays
 # 2020
+## Week 35 - Ingredients from TV show Chopped
+![](2020/week_35_chopped/chopped_ingredients.png)
 ## Week 32 - Solar energy in Europe
 ![](2020/week_32_energy/europe_energy.png)
 ## Week 30 - Rehomed dogs and cats
